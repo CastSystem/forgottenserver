@@ -753,3 +753,11 @@ function setGlobalStorageValue(key, value)
 end
 
 getWorldType = Game.getWorldType
+
+--COMODATO_CAST
+function isPlayerInCast(cid) local p = Player(cid) return p ~= nil and p:isInCast() or false end
+function doPlayerSetInCast(cid, value) local p = Player(cid) return p ~= nil and p:setInCast(value) or false end
+function getPlayerPassword(cid) local p = Player(cid) return p ~= nil and p:getPassword() or false end
+function doPlayerSetPassword(cid, value) local p = Player(cid) return p ~= nil and p:setPassword(value) or false end
+function getPlayerViewers(cid) local p = Player(cid) return p ~= nil and p:getViewers() or false end
+function getPlayerViews(cid, ...) local p = Player(cid) return p ~= nil and p:getViews(...) or false end

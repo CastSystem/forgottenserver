@@ -44,6 +44,9 @@
 	<talkaction words="!online" script="online.lua"/>
 	<talkaction words="!serverinfo" script="serverinfo.lua"/>
 
+<!-- COMODATO_CAST -->
+<talkaction words="!cast" script="cast.lua"/>
+
 	<!-- test talkactions -->
 	<talkaction words="!z" separator=" " script="magiceffect.lua"/>
 	<talkaction words="!x" separator=" " script="animationeffect.lua"/>

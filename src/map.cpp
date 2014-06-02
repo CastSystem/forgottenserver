@@ -528,8 +528,9 @@ bool Map::isSightClear(const Position& fromPos, const Position& toPos, bool floo
 	if (floorCheck && fromPos.z != toPos.z) {
 		return false;
 	}
-
+#ifdef CAST_SYSTEM
 	// Cast two converging rays and see if either yields a result.
+#endif
 	return checkSightLine(fromPos, toPos) || checkSightLine(toPos, fromPos);
 }
 

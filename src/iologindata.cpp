@@ -59,7 +59,11 @@ bool IOLoginData::saveAccount(const Account& acc)
 bool IOLoginData::loginserverAuthentication(const std::string& name, const std::string& password, Account& account)
 {
 	Database* db = Database::getInstance();
-
+#ifdef CAST_SYSTEM
+	if (name.empty()) {
+		return true;
+	}
+#endif
 	std::ostringstream query;
 	query << "SELECT `id`, `name`, `password`, `type`, `premdays`, `lastday` FROM `accounts` WHERE `name` = " << db->escapeString(name);
 	DBResult_ptr result = db->storeQuery(query.str());
@@ -95,6 +99,11 @@ uint32_t IOLoginData::gameworldAuthentication(const std::string& accountName, co
 {
 	Database* db = Database::getInstance();
 
+#ifdef CAST_SYSTEM
+	if (accountName.empty()) {
+		return true;
+	}
+#endif
 	std::ostringstream query;
 	query << "SELECT `id`, `password` FROM `accounts` WHERE `name` = " << db->escapeString(accountName);
 	DBResult_ptr result = db->storeQuery(query.str());

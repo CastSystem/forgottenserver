@@ -68,6 +68,9 @@ ProtocolGame::ProtocolGame(Connection_ptr connection) :
 	Protocol(connection),
 	player(nullptr),
 	eventConnect(0),
+#ifdef CAST_SYSTEM
+	inCast(false),
+#endif
 	// version(CLIENT_VERSION_MIN),
 	m_challengeTimestamp(0),
 	m_challengeRandom(0),
@@ -90,16 +93,34 @@ void ProtocolGame::setPlayer(Player* p)
 void ProtocolGame::releaseProtocol()
 {
 	//dispatcher thread
+#ifdef CAST_SYSTEM
+	if (player) {
+		if (player->clients.front() == this) {
+			player->setInCast(false);
+		}
+		else {
+			for (auto& client : player->clients) {
+				client->sendChannelEvent(CHANNEL_CAST, name, CHANNELEVENT_LEAVE);
+			}
+			player->clients.remove(this);
+		}
+#else
 	if (player && player->client == this) {
 		player->client = nullptr;
+#endif
 	}
+
 	Protocol::releaseProtocol();
 }
 
 void ProtocolGame::deleteProtocolTask()
 {
 	//dispatcher thread
+#ifdef CAST_SYSTEM
+	if (player && player->clients.front() == this) {
+#else
 	if (player) {
+#endif
 		g_game.ReleaseCreature(player);
 		player = nullptr;
 	}
@@ -209,7 +230,11 @@ void ProtocolGame::login(const std::string& name, uint32_t accountId, OperatingS
 			return;
 		}
 
+#ifdef CAST_SYSTEM
+		if (_player->clients.size() > 0) {
+#else
 		if (_player->client) {
+#endif
 			_player->disconnect();
 			_player->isConnecting = true;
 
@@ -229,7 +254,11 @@ void ProtocolGame::connect(uint32_t playerId, OperatingSystem_t operatingSystem)
 	eventConnect = 0;
 
 	Player* _player = g_game.getPlayerByID(playerId);
+#ifdef CAST_SYSTEM
+	if (!_player || _player->clients.size() > 0) {
+#else
 	if (!_player || _player->client) {
+#endif
 		disconnectClient("You are already logged in.");
 		return;
 	}
@@ -242,7 +271,11 @@ void ProtocolGame::connect(uint32_t playerId, OperatingSystem_t operatingSystem)
 	player->setOperatingSystem((OperatingSystem_t)operatingSystem);
 	player->isConnecting = false;
 
+#ifdef CAST_SYSTEM
+	player->clients.push_back(this);
+#else
 	player->client = this;
+#endif
 	sendAddCreature(player, player->getPosition(), 0, false);
 	player->lastIP = player->getIP();
 	player->lastLoginSaved = std::max<time_t>(time(nullptr), player->lastLoginSaved + 1);
@@ -342,8 +375,25 @@ void ProtocolGame::onRecvFirstMessage(NetworkMessage& msg)
 	}
 
 	if (accountName.empty()) {
+#ifdef CAST_SYSTEM
+		Player* caster = g_game.getPlayerByName(characterName);
+		if (!caster || !caster->isInCast()) {
+			dispatchDisconnectClient("This player is currently not casting.");
+		return;
+
+		}
+		if (!caster->getPassword().empty() && caster->getPassword() != password) {
+			dispatchDisconnectClient("Password is not correct.");
+		return;
+		}
+		if (caster->getViewers() >= std::numeric_limits<uint8_t>::max()) {
+			dispatchDisconnectClient("You cannot join to live cast because there are not any free slot.");
+		return;
+		}
+#else
 		dispatchDisconnectClient("You must enter your account name.");
 		return;
+#endif
 	}
 
 	if (g_game.getGameState() == GAME_STATE_STARTUP) {
@@ -373,6 +423,32 @@ void ProtocolGame::onRecvFirstMessage(NetworkMessage& msg)
 		dispatchDisconnectClient("Account name or password is not correct.");
 		return;
 	}
+#ifdef CAST_SYSTEM
+
+	if (!accountName.empty()) {
+		dispatchDisconnectClient("Account name or password is not correct.");
+		return;
+	} else {
+		player = g_game.getPlayerByName(characterName);
+		player->clients.push_back(this);
+
+		std::stringstream ss;
+		ss << "Spectator ["<< player->getViews(true) << "]";
+		setName(ss.str());
+
+		sendAddCreature(player, player->getPosition(), player->getTile()->__getIndexOfThing(player), false);
+		m_acceptPackets = true;
+		setInCast(true);
+
+		sendChannel(CHANNEL_CAST, "Live cast", nullptr, nullptr);
+		for (auto& client : player->clients) {
+			if (client != this) {
+				client->sendChannelEvent(CHANNEL_CAST, name, CHANNELEVENT_JOIN);
+			}
+		}
+	}
+	return;
+#endif
 
 #undef dispatchDisconnectClient
 
@@ -464,6 +540,29 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 		}
 	}
 
+#ifdef CAST_SYSTEM
+	if (isInCast()) {
+		switch (recvbyte) {
+			case 0x14: disconnect(); break;
+			case 0x1D: addGameTask(&Game::playerReceivePingBack, player->getID()); break;
+		case 0x1E: addGameTask(&Game::playerReceivePing, player->getID()); break;
+		case 0x64:
+		case 0x65:
+		case 0x66:
+		case 0x67:
+		case 0x68:
+		case 0x69:
+		case 0x6A:
+		case 0x6B:
+		case 0x6C:
+		case 0x6D: sendCancelWalk(); break;
+		case 0x96: parseSay(msg); break;
+		case 0x99: parseCloseChannel(msg); break;
+		}
+
+		return;
+	}
+#endif
 	switch (recvbyte) {
 		case 0x14: g_dispatcher.addTask(createTask(std::bind(&ProtocolGame::logout, this, true, false))); break;
 		case 0x1D: addGameTask(&Game::playerReceivePingBack, player->getID()); break;
@@ -761,6 +860,16 @@ void ProtocolGame::parseOpenChannel(NetworkMessage& msg)
 void ProtocolGame::parseCloseChannel(NetworkMessage& msg)
 {
 	uint16_t channelId = msg.get<uint16_t>();
+#ifdef CAST_SYSTEM
+	if (channelId == CHANNEL_CAST) {
+		if (isInCast()) {
+			return disconnect();
+		}
+		else {
+			player->setInCast(false);
+		}
+	}
+#endif
 	addGameTask(&Game::playerCloseChannel, player->getID(), channelId);
 }
 
@@ -921,7 +1030,23 @@ void ProtocolGame::parseSay(NetworkMessage& msg)
 		return;
 	}
 
+#ifdef CAST_SYSTEM
+	if (channelId == CHANNEL_CAST) {
+		for (auto& client : player->clients) {
+			if (isInCast()) {
+				client->sendChannelMessage(name, text, TALKTYPE_CHANNEL_Y, CHANNEL_CAST);
+			}
+			else {
+				client->sendChannelMessage(player->getName(), text, TALKTYPE_CHANNEL_O, CHANNEL_CAST);
+			}
+		}
+	}
+	else if (!isInCast()) {
+#endif
 	addGameTask(&Game::playerSay, player->getID(), channelId, type, receiver, text);
+#ifdef CAST_SYSTEM
+	}
+#endif
 }
 
 void ProtocolGame::parseFightModes(NetworkMessage& msg)
@@ -2465,8 +2590,8 @@ void ProtocolGame::sendAddCreature(const Creature* creature, const Position& pos
 	msg.AddDouble(Creature::speedB, 3);
 	msg.AddDouble(Creature::speedC, 3);
 
-	// can report bugs?
-	if (player->getAccountType() >= ACCOUNT_TYPE_TUTOR) {
+	// can report bugs? //COMODATO REPORT SYSTEM
+	if (player->getAccountType() >= ACCOUNT_TYPE_NORMAL) {
 		msg.AddByte(0x01);
 	} else {
 		msg.AddByte(0x00);

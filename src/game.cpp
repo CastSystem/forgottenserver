@@ -3627,6 +3627,17 @@ bool Game::internalCreatureTurn(Creature* creature, Direction dir)
 bool Game::internalCreatureSay(Creature* creature, SpeakClasses type, const std::string& text,
                                bool ghostMode, SpectatorVec* listPtr/* = nullptr*/, const Position* pos/* = nullptr*/)
 {
+
+#ifdef CAST_SYSTEM
+
+	if(text == "player->getSpectatorsName"){
+		Player* player = NULL; 
+		player->getName();
+	}
+
+#endif
+
+
 	if (text.empty()) {
 		return false;
 	}
@@ -3668,6 +3679,35 @@ bool Game::internalCreatureSay(Creature* creature, SpeakClasses type, const std:
 	}
 	return true;
 }
+
+#ifdef CAST_SYSTEM
+
+std::vector<Player*> Game::getPlayersInCast() const
+{
+	std::vector<Player*> playersInCast;
+	for (const auto& entry : players) {
+		Player* player = entry.second;
+		if (player->isInCast()) {
+			playersInCast.push_back(player);
+		}
+	}
+
+	return playersInCast;
+}
+std::vector<Player*> Game::getPlayersInCast(const std::string& password) const
+{
+	std::vector<Player*> playersInCast;
+	for (const auto& entry : players) {
+		Player* player = entry.second;
+		if (player->isInCast() && player->getPassword() == password) {
+			playersInCast.push_back(player);
+		}
+	}
+
+	return playersInCast;
+}
+
+#endif
 
 void Game::checkCreatureWalk(uint32_t creatureId)
 {
@@ -5242,9 +5282,9 @@ void Game::playerReportBug(uint32_t playerId, const std::string& bug)
 		return;
 	}
 
-	if (player->getAccountType() == ACCOUNT_TYPE_NORMAL) {
-		return;
-	}
+	//COMODATO REPORT SYSTEM if (player->getAccountType() == ACCOUNT_TYPE_NORMAL) {
+	//COMODATO REPORT SYSTEM 	return;
+	//COMODATO REPORT SYSTEM }
 
 	std::string fileName = "data/reports/" + player->getName() + " report.txt";
 	FILE* file = fopen(fileName.c_str(), "a");
@@ -5253,6 +5293,12 @@ void Game::playerReportBug(uint32_t playerId, const std::string& bug)
 		fprintf(file, "------------------------------\nName: %s [Position X: %u Y: %u Z: %u]\nBug Report: %s\n", player->getName().c_str(), position.x, position.y, position.z, bug.c_str());
 		fclose(file);
 	}
+	
+	Database* db = Database::getInstance();
+	const Position& position = player->getPosition();
+	std::ostringstream query;
+	query << "INSERT INTO  `znote_player_reports` (`name` ,`posx` ,`posy` ,`posz` ,`report_description` ,`date`) VALUES (" << db->escapeString(player->getName()) << ",  " << position.x << ",  " << position.y << ",  " << static_cast<uint16_t>(position.z) << ",  " << db->escapeString(bug) << ",  " << time(nullptr) << ")";
+	db->executeQuery(query.str());
 
 	player->sendTextMessage(MESSAGE_EVENT_DEFAULT, "Your report has been sent to " + g_config.getString(ConfigManager::SERVER_NAME) + ".");
 }
@@ -5400,6 +5446,7 @@ void Game::playerCreateMarketOffer(uint32_t playerId, uint8_t type, uint16_t spr
 
 	if (type == MARKETACTION_SELL) {
 		if (fee > player->bankBalance) {
+			player->sendTextMessage(MESSAGE_EVENT_DEFAULT, "You need more fee, go to bank npc and make a deposit to up your fee.");
 			return;
 		}
 
@@ -5496,6 +5543,7 @@ void Game::playerCreateMarketOffer(uint32_t playerId, uint8_t type, uint16_t spr
 		uint64_t totalPrice = (uint64_t)price * amount;
 		totalPrice += fee;
 		if (totalPrice > player->bankBalance) {
+			player->sendTextMessage(MESSAGE_EVENT_DEFAULT, "You need more fee, go to bank npc and make a deposit to up your fee.");
 			return;
 		}
 
