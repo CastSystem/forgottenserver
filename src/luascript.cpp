@@ -2199,6 +2199,7 @@ void LuaScriptInterface::registerFunctions()
 	registerMethod("Player", "getClient", LuaScriptInterface::luaPlayerGetClient);
 #ifdef CAST_SYSTEM
 	registerMethod("Player", "isInCast", LuaScriptInterface::luaPlayerIsInCast);
+	registerMethod("Player", "kickViewers", LuaScriptInterface::luaPlayerKickViewers);
 	registerMethod("Player", "setInCast", LuaScriptInterface::luaPlayerSetInCast);
 	registerMethod("Player", "getPassword", LuaScriptInterface::luaPlayerGetPassword);
 	registerMethod("Player", "setPassword", LuaScriptInterface::luaPlayerSetPassword);
@@ -7922,6 +7923,23 @@ int32_t LuaScriptInterface::luaPlayerIsInCast(lua_State* L)
 		pushBoolean(L, player->isInCast());
 	}
 	else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+int32_t LuaScriptInterface::luaPlayerKickViewers(lua_State* L)
+{
+	// player:KickViewers()
+	Player* player = getUserdata<Player>(L, 1);
+	if (player) {
+		if (player->isInCast()){
+			player->kickCastViewers();
+			lua_pushboolean(L, true);
+		}
+		else {
+			lua_pushnil(L);
+		}
+	}else {
 		lua_pushnil(L);
 	}
 	return 1;

@@ -2070,7 +2070,11 @@ void Game::playerReceivePingBack(uint32_t playerId)
 	if (!player) {
 		return;
 	}
-
+#ifdef
+	if (player->clients.size() == 0){
+		return;
+	}
+#endif
 	player->sendPingBack();
 }
 

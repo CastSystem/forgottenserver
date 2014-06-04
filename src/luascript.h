@@ -483,6 +483,7 @@ class LuaScriptInterface
 		//
 #ifdef CAST_SYSTEM
 		static int32_t luaPlayerIsInCast(lua_State* L);
+		static int32_t luaPlayerKickViewers(lua_State* L);
 		static int32_t luaPlayerSetInCast(lua_State* L);
 		static int32_t luaPlayerGetPassword(lua_State* L);
 		static int32_t luaPlayerSetPassword(lua_State* L);

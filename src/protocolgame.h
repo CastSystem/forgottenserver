@@ -103,6 +103,7 @@ class ProtocolGame : public Protocol
 		void setInCast(bool value) {
 			inCast = value;
 		}
+		void kickCastViewer(const std::string& viewer);
 #endif
 	private:
 		std::unordered_set<uint32_t> knownCreatureSet;

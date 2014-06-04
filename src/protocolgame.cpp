@@ -318,7 +318,9 @@ void ProtocolGame::logout(bool displayEffect, bool forced)
 	if (Connection_ptr connection = getConnection()) {
 		connection->closeConnection();
 	}
-
+#ifdef CAST_SYSTEM
+	player->setInCast(false);
+#endif
 	g_game.removeCreature(player);
 }
 

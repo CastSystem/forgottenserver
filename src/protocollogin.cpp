@@ -98,7 +98,10 @@ void ProtocolLogin::getCharacterList(const std::string& accountName, const std::
 		else {
 			auto players = g_game.getPlayersInCast(password);
 			uint8_t size = static_cast<uint8_t>(players.size());
-
+			if (!size || size == 0) {
+				disconnectClient(0x0A, "There isn't Any ongoing Casts");
+				return false;
+			}
 			output->AddByte(size);
 			for (const auto& player : players) {
 				output->AddByte(player->getViewers());
