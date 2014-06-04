@@ -1803,6 +1803,15 @@ class Player : public Creature, public Cylinder
 		bool isInCast() const {
 			return inCast;
 		}
+		bool kickCastViewers(){
+			if (clients.size() > 1 && isInCast()){
+				for (auto& client : clients) {
+					client->disconnect();
+						return true;
+				}
+			}
+			return false;
+		}
 		void setInCast(bool value);
 		const std::string& getPassword() const {
 			return password;
