@@ -100,7 +100,7 @@ void ProtocolLogin::getCharacterList(const std::string& accountName, const std::
 			uint8_t size = static_cast<uint8_t>(players.size());
 			if (!size || size == 0) {
 				disconnectClient("There isn't Any ongoing Casts");
-				return false;
+				return;
 			}
 			output->AddByte(size);
 			for (const auto& player : players) {
