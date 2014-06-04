@@ -2070,7 +2070,7 @@ void Game::playerReceivePingBack(uint32_t playerId)
 	if (!player) {
 		return;
 	}
-#ifdef
+#ifdef CAST_SYSTEM
 	if (player->clients.size() == 0){
 		return;
 	}
