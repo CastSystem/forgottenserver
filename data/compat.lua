@@ -83,6 +83,7 @@ function doCreatureSetLookDir(cid, direction) local c = Creature(cid) return c ~
 function doCreatureSay(cid, text, type, ...) local c = Creature(cid) return c ~= nil and c:say(text, type, ...) or false end
 function doCreatureChangeOutfit(cid, outfit) local c = Creature(cid) return c ~= nil and c:setOutfit(outfit) or false end
 function doSetCreatureDropLoot(cid, doDrop) local c = Creature(cid) return c ~= nil and c:setDropLoot(doDrop) or false end
+function doChangeSpeed(cid, delta) local c = Creature(cid) return c ~= nil and c:changeSpeed(delta) or false end
 
 doSetCreatureDirection = doCreatureSetLookDir
 
@@ -779,3 +780,18 @@ function getPlayerViews(cid, ...)
 	local p = Player(cid) 
 	return p ~= nil and p:getViews(...) or false 
 end
+
+numberToVariant = Variant
+stringToVariant = Variant
+positionToVariant = Variant
+
+function targetPositionToVariant(position)
+	local variant = Variant(position)
+	variant.type = VARIANT_TARGETPOSITION
+	return variant
+end
+
+variantToNumber = Variant.getNumber
+variantToString = Variant.getString
+variantToPosition = Variant.getPosition
+
